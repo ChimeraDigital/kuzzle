@@ -1,5 +1,6 @@
 const
   should = require('should'),
+  sinon = require('sinon'),
   jwt = require('jsonwebtoken'),
   Bluebird = require('bluebird'),
   /** @type KuzzleConfiguration */
@@ -12,7 +13,8 @@ const
     UnauthorizedError,
     BadRequestError,
     InternalError: KuzzleInternalError
-  } = require('kuzzle-common-objects').errors;
+  } = require('kuzzle-common-objects').errors,
+  PluginManager = require('../../../lib/api/core/plugins/pluginsManager');
 
 describe('Test the auth controller', () => {
   let
@@ -269,10 +271,16 @@ describe('Test the auth controller', () => {
 
   describe('#getAuthenticationStrategies', () => {
     it('should return a valid response', () => {
-      return kuzzle.funnel.controllers.auth.getStrategies()
-        .then(response => {
-          should(response).be.instanceof(Object);
-          should(response).have.property('authenticationStrategies').instanceof(Array);
+      kuzzle.pluginsManager = new PluginManager(kuzzle);
+
+      should(kuzzle.pluginsManager.registeredStrategies).be.an.Array().of.length(0);
+      should(kuzzle.pluginsManager.listStrategies).be.a.Function();
+      let spy = sinon.spy(kuzzle.pluginsManager, 'listStrategies');
+
+      return authController.getStrategies()
+        .then(result => {
+          should(spy).calledOnce();
+          should(result).be.instanceof(Array).of.length(0);
         });
     });
   });
